@@ -5,7 +5,7 @@ import argparse
 def display(board):
     """
     Display the board
-    Used for db
+    Used for debugging
     """
     for i in board:
         for j in i:
@@ -30,10 +30,7 @@ def board_valid(row_constraint, col_constraint, board):
     - col constraint is met
     - no two ships are adjacent
     """
-
-    # print("Board at entry of board_valid")
-    # display(board)
-    # row constraint
+    # Row constraint
     for i, row in enumerate(board): 
         X_row = O_row = 0
         for j, char in enumerate(row): 
@@ -41,15 +38,12 @@ def board_valid(row_constraint, col_constraint, board):
                 X_row += 1
             if char == '0': 
                 O_row += 1
-        # print(X_row, O_row)
-        # print(row_constraint[i])
         if X_row != row_constraint[i] and O_row == 0: 
             return False
         elif X_row + O_row < row_constraint[i]: 
             return False
-    # print('')
 
-    # col constraint
+    # Column constraint
     for i in range(len(board)):
         X_col = O_col = 0
         for j in range(len(board)):
@@ -57,14 +51,12 @@ def board_valid(row_constraint, col_constraint, board):
                 X_col += 1
             if board[j][i] == '0': 
                 O_col += 1
-        # print(X_col, O_col)
-        # print(col_constraint[i])
         if X_col > col_constraint[i]:
             return False
         elif X_col + O_col < col_constraint[i]: 
             return False
         
-    # diagonal constraint
+    # Diagonal constraint
     for i, row in enumerate(board): 
         for j, char in enumerate(row): 
             if char == 'X': 
@@ -79,14 +71,19 @@ def board_valid(row_constraint, col_constraint, board):
     return True
 
 def place_ships(ship_constraint, board):
+    """
+    Check if the ships are placed correctly according to the constraints
+    """
     temp_board = copy.deepcopy(board)
     ships, temp_board = poscount_ships(temp_board)
-    if ships[0] == ship_constraint[0] and ships[1] == ship_constraint[1] and ships[2] == ship_constraint[2] and ships[3] == ship_constraint[3]:
+    if ships == ship_constraint:
         return True
     return False
 
 def poscount_ships(board):
-    # for board in solutions:
+    """
+    Count the number of ships of each type on the board
+    """
     ships = [0, 0, 0, 0]
     for i, line in enumerate(board):
         for j, ch in enumerate(line):
@@ -131,6 +128,9 @@ def poscount_ships(board):
     return ships, board
 
 def backtrack(O_val, row_constraint, col_constraint, ship_constraint, board):
+    """
+    Backtracking algorithm to find the solution for the board
+    """
     if len(O_val) == 0:
         if board_valid(row_constraint, col_constraint, board) and place_ships(ship_constraint, board):
             return board
@@ -148,10 +148,9 @@ def backtrack(O_val, row_constraint, col_constraint, ship_constraint, board):
             temp_board = backtrack(O_val[1:], row_constraint, col_constraint, ship_constraint, board)
             if temp_board != None:
                 return board
-    O_val.append((i, j))
+    O_val.append((x, y))
     board[x][y] = '0'
     return None
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -169,67 +168,35 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    """
-    Parse board and ships info
-    """
-    # open input file
-    in_file = open(args.inputfile, "r")
-    # file = open('input_easy1.txt', 'r')
-    b = in_file.read()
+    # Parse board and ships info
+    with open(args.inputfile, "r") as in_file:
+        b = in_file.read()
     b2 = b.split()
-    size = len(b2[0])
-    size = size + 2
-    b3 = []
-    b3 += ['0' + b2[0] + '0']
-    b3 += ['0' + b2[1] + '0']
-    b3 += [b2[2] + ('0' if len(b2[2]) == 3 else '')]
-    for i in range(3, len(b2)):
-        b3 += [ b2[i]]
+    size = len(b2[0]) + 2
+    b3 = ['0' + b2[0] + '0', '0' + b2[1] + '0', b2[2] + ('0' if len(b2[2]) == 3 else '')] + b2[3:]
     board = "\n".join(b3)
 
-    row_constraint = []
-    for i in range(len(b2[0])): 
-        row_constraint.append(int(b2[0][i]))
-    # print(row_constraint)
-
-    col_constraint = []
-    for i in range(len(b2[1])):
-        col_constraint.append(int(b2[1][i]))
-    # print(col_constraint)
-
-    ship_constraint = []
-    for i in range(len(b2[2])):
-        ship_constraint.append(int(b2[2][i]))
-    # print(ship_constraint)
+    row_constraint = [int(b2[0][i]) for i in range(len(b2[0]))]
+    col_constraint = [int(b2[1][i]) for i in range(len(b2[1]))]
+    ship_constraint = [int(b2[2][i]) for i in range(len(b2[2]))]
 
     board = board.split()[3:]
     board = [list(i) for i in board]
-    # print("Board after reading")
-    # display(board)
 
-
-    """
-    Preprocess the board
-    """
-    # if any column has 0 constraint, put water in col
+    # Preprocess the board
     for i in range(len(col_constraint)): 
         if col_constraint[i] == 0: 
             for j in range(len(board)): 
                 if board[j][i] == '0': 
                     board[j][i] = '.'
-    # display(board)
-    # if any row has 0 constraint, put water in row
     for i in range(len(row_constraint)):
         if row_constraint[i] == 0: 
-            # print("mark")
             for j in range(len(board[i])):
                 if board[i][j] == '0': 
                     board[i][j] = '.'
-    # if there is a submarine S, put water in all 8 directions
     for i in range(len(board[0])):
         for j in range(len(board)):
             if board[i][j] == 'S': 
-                # mark as a ship
                 board[i][j] = 'X'
                 if valid(i-1, j-1, board):
                     board[i-1][j-1] = '.'
@@ -247,11 +214,10 @@ if __name__ == '__main__':
                     board[i][j+1] = '.'
                 if valid(i+1, j+1, board):
                     board[i+1][j+1] = '.'
-            
             if board[i][j] == '<':
                 board[i][j] = 'X'
                 if valid(i, j+1, board): 
-                    board[i][j+1] = 'X' #piece to the right is a ship
+                    board[i][j+1] = 'X'
                 if valid(i-1, j-1, board):
                     board[i-1][j-1] = '.'
                 if valid(i, j-1, board):
@@ -266,11 +232,10 @@ if __name__ == '__main__':
                     board[i-1][j+1] = '.'
                 if valid(i+1, j+1, board):
                     board[i+1][j+1] = '.'
-
             if board[i][j] == '>':  
                 board[i][j] = 'X' 
                 if valid(i, j-1, board): 
-                    board[i][j-1] = 'X' #piece to the left is a ship                 
+                    board[i][j-1] = 'X'
                 if valid(i-1, j-1, board):
                     board[i-1][j-1] = '.'
                 if valid(i+1, j-1, board):
@@ -285,11 +250,10 @@ if __name__ == '__main__':
                     board[i][j+1] = '.'
                 if valid(i+1, j+1, board):
                     board[i+1][j+1] = '.'
-
             if board[i][j] == '^':
                 board[i][j] = 'X'
                 if valid(i+1, j, board): 
-                    board[i+1][j] = 'X' #piece to the bottom is a ship
+                    board[i+1][j] = 'X'
                 if valid(i-1, j-1, board):
                     board[i-1][j-1] = '.'
                 if valid(i, j-1, board):
@@ -304,11 +268,10 @@ if __name__ == '__main__':
                     board[i][j+1] = '.'
                 if valid(i+1, j+1, board):
                     board[i+1][j+1] = '.'  
-
             if board[i][j] == 'v':
                 board[i][j] = 'X'
                 if valid(i-1, j, board): 
-                    board[i-1][j] = 'X' #piece to the top is a ship
+                    board[i-1][j] = 'X'
                 if valid(i-1, j-1, board):
                     board[i-1][j-1] = '.'
                 if valid(i, j-1, board):
@@ -323,7 +286,6 @@ if __name__ == '__main__':
                     board[i][j+1] = '.'
                 if valid(i+1, j+1, board):
                     board[i+1][j+1] = '.' 
-
             if board[i][j] == 'M':
                 board[i][j] = 'X'
                 if valid(i-1, j-1, board):
@@ -334,30 +296,18 @@ if __name__ == '__main__':
                     board[i-1][j+1] = '.'
                 if valid(i+1, j+1, board):
                     board[i+1][j+1] = '.' 
-    # print("Board after preprocessing: ")
-    # display(board)
 
-    # find list of 0 coordinates
-    O_vars = []
-    for i, line in enumerate(board): 
-        for j, char in enumerate(line):
-            if char == '0':
-                O_vars.append((i, j))
-    # print ("O_val variables:")
-    # print(O_vars)
+    # Find list of '0' coordinates
+    O_vars = [(i, j) for i, line in enumerate(board) for j, char in enumerate(line) if char == '0']
 
-    # find solution for X placement by backtracking
+    # Find solution for 'X' placement by backtracking
     sol_board = backtrack(O_vars, row_constraint, col_constraint, ship_constraint, board)
-    if sol_board == None:
+    if sol_board is None:
         print("No solution found")
     else: 
-        ff, sol = poscount_ships(sol_board)
-        # display(sol)
-        """
-        write sol to output file
-        """
-        out_file = open(args.outputfile, "w")
-        for i in sol_board:
+        _, sol = poscount_ships(sol_board)
+        with open(args.outputfile, "w") as out_file:
+            for i in sol_board:
                 for j in i:
                     out_file.write(j)
                 out_file.write('\n')
